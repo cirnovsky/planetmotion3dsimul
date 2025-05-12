@@ -1,58 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>3D Planets</title>
-  <style>
-    body { margin: 0; overflow: hidden; }
-    canvas { display: block; }
-  </style>
+	<title>Planetary Motion 3D Simulation</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<meta charset="UTF-8" />
+
+	<!-- <link rel="icon" href="" type="image/x-icon" /> -->
+	<link rel="stylesheet" href="/src/style/main.css" type="text/css" />
+
+	<script type="module" src="/src/js/main.js"></script>
 </head>
 <body>
-<canvas id="webgl"></canvas>
-
-<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
-<script>
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(
-    75, window.innerWidth / window.innerHeight, 0.1, 1000
-  );
-  const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('webgl') });
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  document.body.appendChild(renderer.domElement);
-
-  const light = new THREE.PointLight(0xffffff, 1);
-  light.position.set(10, 10, 10);
-  scene.add(light);
-
-  const planets = {};
-
-  function updatePlanet(data) {
-    let planet = planets[data.id];
-    if (!planet) {
-      const geometry = new THREE.SphereGeometry(data.radius, 32, 32);
-      const material = new THREE.MeshStandardMaterial({ color: data.color });
-      planet = new THREE.Mesh(geometry, material);
-      scene.add(planet);
-      planets[data.id] = planet;
-    }
-    planet.position.set(data.x, data.y, data.z);
-  }
-
-  const examplePlanets = [
-    { id: 'earth', x: 0, y: 0, z: 0, radius: 1, color: 0x00aaff },
-    { id: 'mars', x: 3, y: 0, z: 0, radius: 0.5, color: 0xff3300 }
-  ];
-
-  camera.position.z = 10;
-
-  function animate() {
-    requestAnimationFrame(animate);
-    examplePlanets.forEach(updatePlanet);
-    renderer.render(scene, camera);
-  }
-  animate();
-</script>
+	<div id="scene-container">
+		<canvas>
+		</canvas>
+	</div>
 </body>
-</html>
-
