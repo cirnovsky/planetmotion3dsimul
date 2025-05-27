@@ -1,16 +1,125 @@
 <!DOCTYPE html>
-<html>
 <head>
-	<title>Planetary Motion 3D Simulation</title>
-	<meta name="viewport" content="width=device-width, initial-scale=1" />
-	<meta charset="UTF-8" />
-
-	<!-- <link rel="icon" href="" type="image/x-icon" /> -->
-	<link rel="stylesheet" href="/src/styles/main.css" type="text/css" />
-
-	<script type="module" src="/src/js/main.js"></script>
+  <meta charset="UTF-8" />
+  <title>Planetary Simulation</title>
+  <link rel="stylesheet" src="./src/styles/main.css" />
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dat.gui"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
 </head>
-<body>
-	<div id="scene-container">
-	</div>
+<<body>
+  <script>
+    const G = 0.00029591220828559104
+    const dt = 0.05
+    let maxTrailLength = 300
+
+    const scene = new THREE.Scene()
+    const loader = new THREE.TextureLoader()
+    loader.load("url/to/background", function(texture) {
+      scene.background = texture
+    })
+
+    const camera = new THREE.PerspectiveCamera(
+      60, // fov 
+      window.innerWidth / window.innerHeight, // aspect 
+      0.01, // near plane 
+      1000, // far plane
+    )
+    camera.position.set(0, 2, 5)
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true })
+    renderer.setSize(window.innerWidth, window.innerHeight)
+    document.body.appendChild(renderer.domElement)
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement)
+    controls.enableDamping = true
+    controls.dampingFactor = 0.05
+    controls.enablePan = false
+    controls.minDistance = 1 
+    controsl.maxDistance = 50
+
+    const light = new THREE.PointLight(0xffffff, 2)
+    light.position.set(0, 0, 0)
+    scene.add(light)
+
+    const bodies = []
+
+    createBody = (name, mass, position, velocity, size, color) => {
+      const geometry = new THREE.SphereGeometry(size, 32, 32)
+      const material = new THREE.MeshStandardMaterial({ color })
+      const mesh = new THREE.mesh(geometry, material)
+      mesh.position.x = position.x 
+      mesh.position.y = position.y 
+      mesh.position.z = position.z 
+      
+      scene.add(mesh)
+
+      const trailGeometry = new THREE.BufferGeometry().setFromPoints([position.clone()])
+      const trailMaterial = new THREE.LineBasicMaterial({ color })
+      const trailLine = new THREE.Line(trailGeometry, trailMaterial)
+
+      scene.add(trailLine)
+
+      bodies.push({
+        name, mass,
+        pos: position.clone(),
+        vel: velocity.clone(),
+        acc: new THREE.Vector3(),
+        mesh,
+        trailPosition: [position.clone()],
+        trailGeometry,
+        traliLine
+      })
+    }
+
+    createBody("Sun", 1, new Vector3(0, 0, 0), new Vector3(0, 0, 0), 0.1, 0xffff00)
+    createBody("Earth", 0.000003, new Vector3(0, 0, 0), new Vector3(0, 0, 0), 0.03, 0x3399ff)
+
+    // gui
+    const settings = {
+      timeScale: 1,
+      trailLength: maxTrailLength
+    }
+    const gui = new dat.GUI()
+    // TODO: gui.add timeScale and trailLength
+
+
+    // update physics. for more document refer to src/js/calc.js
+    function tick() {
+      for (let i = 0; i < bodies.length; ++i) {
+        let now = bodies[i]
+        now.acc.set(0, 0, 0)
+
+        for (let j = 0; j < bodies.length; ++j) {
+          if (i == j)
+            continue
+          let other = bodies[j]
+          let rVec = new THREE.Vector3().subVectors(other.pos, now.pos)
+          let dist = rVec.length()
+          let accMag = G * other.mass / dist ** 2
+          let accVec = rVec.normalize().multiplyByScalar(accMag)
+
+          now.acc.add(accVec)
+        }
+      }
+
+      for (let body of bodies)
+    }
+
+    function animate() {
+      requestAnimationFrame(animate)
+      for (let i = 0; i < 4; ++i)
+        tick()
+      controls.update()
+      renderer.render(scene, camera)
+    }
+
+    animate()
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    })
+  </script>
 </body>

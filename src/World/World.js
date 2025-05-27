@@ -1,5 +1,5 @@
 import { createCamera } from './components/camera.js'
-import { createCube } from './components/cube.js'
+import { createPlanet } from './components/planet.js'
 import { createScene } from './components/scene.js'
 import { createLights } from './components/lights.js'
 
@@ -17,16 +17,17 @@ export class World {
 		loop = new Loop(camera, scene, renderer)
 		container.append(renderer.domElement)
 
-		const cube = createCube()
+		const planet = createPlanet()
 		const light = createLights()
 
-		scene.add(cube, light)
+    loop.updatables.push(planet)
+
+		scene.add(planet, light)
 
 		const resizer = new Resizer(container, camera, renderer)
 		resizer.onResize = () => {
 			this.render()
-		}
-
+		} // no need because it refreshes 60 times per sec
 	}
 	
 	render() {
