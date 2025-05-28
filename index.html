@@ -78,7 +78,7 @@
     // gui
     const settings = {
       timeScale: 1,
-      trailLength: maxTrailLength
+      trailLength: maxTrailLength / 2
     }
     const gui = new dat.GUI()
     // TODO: gui.add timeScale and trailLength
@@ -103,7 +103,9 @@
         }
       }
 
-      for (let body of bodies)
+      for (let body of bodies) {
+        let vel = body.
+      }
     }
 
     function animate() {
