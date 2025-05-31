@@ -17,7 +17,7 @@
   <script type="module">
     import * as THREE from "three"
     import { OrbitControls } from "three/addons/controls/OrbitControls.js"
-
+    
     const G = 0.00029591220828559104 // Gravitational constant in astronomical units
     const AU = 1 // Astronomical unit in simulation unit
     const DAY = 1 // 1s = 1day
@@ -27,7 +27,7 @@
     const scene = new THREE.Scene()
     const loader = new THREE.TextureLoader()
     // TODO: Background texture
-    loader.load("url/to/background", function(texture) {
+    loader.load("background_img.png", function(texture) {
       scene.background = texture
     })
 
@@ -37,7 +37,7 @@
       0.01, // near plane 
       1000, // far plane
     )
-    camera.position.set(0, 2, 5)
+    camera.position.set(0, 0, 5)
 
     const renderer = new THREE.WebGLRenderer({ antialias: true })
     renderer.setSize(window.innerWidth, window.innerHeight)
@@ -51,19 +51,24 @@
     controls.maxDistance = 50
 
     const light = new THREE.PointLight(0xffffff, 2)
-    light.position.set(0, 0, 0)
+    light.position.set(0, 0, 5)
+    light.intensity = 20
     scene.add(light)
 
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.05); // soft white light with low intensity
+    scene.add(ambientLight);
+
+
     const bodies = []
+
 
     let createBody = (name, mass, position, velocity, size, color) => {
       const geometry = new THREE.SphereGeometry(size, 32, 32)
       const material = new THREE.MeshStandardMaterial({ color })
       const mesh = new THREE.Mesh(geometry, material)
-      mesh.position.x = position.x 
-      mesh.position.y = position.y 
-      mesh.position.z = position.z 
-      
+      mesh.position.x = position.x
+      mesh.position.y = position.y
+      mesh.position.z = position.z
       scene.add(mesh)
 
       const trailGeometry = new THREE.BufferGeometry().setFromPoints([position.clone()])
@@ -71,9 +76,9 @@
       const trailLine = new THREE.Line(trailGeometry, trailMaterial)
 
       // scene.add(trailLine)
-
+  
       bodies.push({
-        name, mass,
+        name, mass, size,
         pos: position.clone(),
         vel: velocity.clone(),
         acc: new THREE.Vector3(),
@@ -83,15 +88,16 @@
         trailLine
       })
     }
-
-    createBody("Sun", 1, new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 0), 0.1, 0xffff00)
-    createBody("Earth", 0.000003, new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 0), 0.03, 0x3399ff)
-
+    createBody("Sun", 1.5, new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 0), 0.1, 0xff0000)
+    createBody("Earth", 0.000003, new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 0), 0.03, 0x3399ff)
+    //createBody("Earth2", 0.000003, new THREE.Vector3(3.4, 0.1, 0), new THREE.Vector3(0, 0, 0), 0.03, 0x3399ff)
     // gui
+
     const settings = {
       timeScale: 1,
       trailLength: maxTrailLength
     }
+
     const gui = new dat.GUI()
     // TODO: gui.add timeScale and trailLength
 
@@ -110,19 +116,20 @@
             continue
           let other = bodies[j]
           let rVec = new THREE.Vector3().subVectors(other.pos, now.pos)
+          let lVec = new THREE.Vector3().subVectors(now.pos, other.pos)
           let dist = rVec.length()
           let accMag = G * other.mass / dist ** 2
           let accVec = rVec.clone().normalize().multiplyScalar(accMag)
 
           now.acc.add(accVec)
+
         }
       }
-
+    
       for (let body of bodies) {
         let vel = body.vel.clone()
-        
         body.vel.add(body.acc.clone().multiplyScalar(dt * settings.timeScale))
-        body.pos.add(new THREE.Vector3().subVectors(body.vel.square(), vel.square()).divide(body.acc.clone().multiplyScalar(2)))
+        body.pos.add((vel.multiplyScalar(dt * settings.timeScale)).add(body.acc.clone().multiplyScalar(0.5 * (dt * settings.timeScale)**2 ) ) )
 
         body.mesh.position.copy(body.pos)
 
@@ -131,10 +138,10 @@
         //   body.trailPositions.shift()
         // body.trailGeometry.setFromPoints(body.trailPositions)
 
-        // TODO: collision detection
+        // Assume Elastic Collision!
       }
     }
-
+    
     function animate() {
       requestAnimationFrame(animate)
       for (let i = 0; i < 4; ++i)
@@ -150,5 +157,6 @@
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     })
+
     </script>
 </body>
