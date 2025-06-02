@@ -22,7 +22,6 @@
     const AU = 1 // Astronomical unit in simulation unit
     const DAY = 1 // 1s = 1day
     const dt = 0.05 // Time step in days
-    const EPS = 1e-6 // 
     let maxTrailLength = 300
 
     const scene = new THREE.Scene()
@@ -62,21 +61,16 @@
 
     const bodies = []
 
-    let isEqual = (x, y) => (Math.abs(x - y) < EPS);
-
     /**
      * @lhs, @rhs: THREE.Vector3
      * Returns: Whether @lhs and @rhs are at the same position, which is a collision.
     */
-    let isCollision = (lhs, rhs) => (isEqual(lhs.x, rhs.x) && isEqual(lhs.y, rhs.y) && isEqual(lhs.z, rhs.z))
 
     let createBody = (name, mass, position, velocity, size, color) => {
       const geometry = new THREE.SphereGeometry(size, 32, 32)
       const material = new THREE.MeshStandardMaterial({ color })
       const mesh = new THREE.Mesh(geometry, material)
-      mesh.position.x = position.x
-      mesh.position.y = position.y
-      mesh.position.z = position.z
+      mesh.position.copy(position)
       scene.add(mesh)
 
       const trailGeometry = new THREE.BufferGeometry().setFromPoints([position.clone()])
@@ -98,7 +92,6 @@
     }
     createBody("Sun", 1.5, new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 0), 0.1, 0xff0000)
     createBody("Earth", 0.000003, new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 0), 0.03, 0x3399ff)
-    //createBody("Earth2", 0.000003, new THREE.Vector3(3.4, 0.1, 0), new THREE.Vector3(0, 0, 0), 0.03, 0x3399ff)
     // gui
 
     const settings = {
@@ -145,8 +138,6 @@
         // if (body.trailPositions.length > maxTrailLength)
         //   body.trailPositions.shift()
         // body.trailGeometry.setFromPoints(body.trailPositions)
-
-        // Assume Elastic Collision!
       }
 
       for (let i = 0; i < bodies.length; ++i) {
