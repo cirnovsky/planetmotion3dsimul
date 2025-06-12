@@ -9,7 +9,8 @@
   {
     "imports": {
       "three": "https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/"
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/",
+      "three/src/": "https://cdn.jsdelivr.net/npm/three@0.176.0/src/"
     }
   }
   </script>
@@ -17,7 +18,7 @@
   <script type="module">
     import * as THREE from "three"
     import { OrbitControls } from "three/addons/controls/OrbitControls.js"
-    import { Timer } from "three/addons/misc/Timer.js"
+    import { Clock } from "three/src/core/Clock.js"
 
     /**
     * Units:
@@ -38,7 +39,6 @@
     *   - Approximations apply
     */
     const G = 4 * Math.PI ** 2
-    const dt = 0.0003
     let maxTrailLength = 300
 
     const scene = new THREE.Scene()
@@ -94,7 +94,7 @@
       const trailMaterial = new THREE.LineBasicMaterial({ color })
       const trailLine = new THREE.Line(trailGeometry, trailMaterial)
 
-      // scene.add(trailLine)
+      scene.add(trailLine)
   
       bodies.push({
         name, mass, size,
@@ -107,6 +107,8 @@
         trailLine
       })
     }
+
+    // sqrt(G * m1 / r) = v
     createBody(
       "Sun",
       0.03,
@@ -119,17 +121,15 @@
       "Earth",
       3.0027e-6,
       new THREE.Vector3(1.5, 0, 0),
-      new THREE.Vector3(0, 1000, 0),
+      new THREE.Vector3(0, 0, 0),
       0.3,
       0x3399ff
     )
-    // createBody("Sun", 0.01, new THREE.Vector3(0, 1, 0), new THREE.Vector3(1, 0, 0), 0.03, 0xff0000)
-    // createBody("Earth", 0.01, new THREE.Vector3(Math.cos(-Math.PI / 6), Math.sin(-Math.PI / 6), 0), new THREE.Vector3(Math.sin(-Math.PI / 6), -Math.cos(-Math.PI / 6), 0), 0.03, 0x3399ff)
-    // createBody("Earth2", 0.01, new THREE.Vector3(Math.cos(-Math.PI * 5 / 6), Math.sin(-Math.PI * 5 / 6), 0), new THREE.Vector3(Math.sin(-Math.PI * 5 / 6), -Math.cos(-Math.PI * 5 / 6), 0), 0.03, 0x3399ff)
-    // createBody("Sun", 10, new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 0), 0.03, 0xff0000)
-    // createBody("Earth", 10, new THREE.Vector3(Math.cos(-Math.PI / 6), Math.sin(-Math.PI / 6), 0), new THREE.Vector3(0, 0, 0), 0.03, 0x3399ff)
-    // createBody("Earth2", 10, new THREE.Vector3(Math.cos(-Math.PI * 5 / 6), Math.sin(-Math.PI * 5 / 6), 0), new THREE.Vector3(0, 0, 0), 0.03, 0x3399ff)
-    // gui
+    let rVec = bodies[0].pos.clone().sub(bodies[1].pos)
+    let rMag = rVec.length()
+    let velMag = Math.sqrt(G * bodies[0].mass / rMag)
+    let velVec = new THREE.Vector3(0, 0, 1).cross(rVec).normalize().multiplyScalar(velMag)
+    bodies[1].vel = velVec.clone()
 
     const settings = {
       timeScale: 1,
@@ -163,6 +163,8 @@
 
     // update physics. for more document refer to src/js/calc.js
     function tick(delta) {
+      const dt = delta * settings.timeScale
+
       for (let i = 0; i < bodies.length; ++i) {
         let now = bodies[i]
         now.acc.set(0, 0, 0)
@@ -170,8 +172,8 @@
         for (let j = 0; j < bodies.length; ++j) {
           if (i == j)
             continue
+
           let other = bodies[j]
-          // let rVec = other.pos.clone().sub(now.pos)
           let rVec = now.pos.clone().sub(other.pos)
           let dist = rVec.length()
           let accMag = G * other.mass / dist ** 2
@@ -183,19 +185,23 @@
     
       for (let body of bodies) {
         let initvel = body.vel.clone()
-        body.vel.add(body.acc.clone().multiplyScalar(dt * settings.timeScale))
-        let displacement = body.vel.clone().multiplyScalar(dt * settings.timeScale)
+        body.vel.add(body.acc.clone().multiplyScalar(dt))
+
+        let displacement = body.vel.clone().multiplyScalar(dt)
         let displacement2 = body.vel.square().sub(initvel.square()).safeDivide(body.acc.clone().multiplyScalar(2))
-        body.pos.add(displacement2)
-        if (Math.abs(initvel.clone().dot(body.acc)) < 1e-16)
-          console.log("FUCK U DUMBASS")
+        body.pos.add(displacement)
+
+        if (Math.abs(initvel.clone().dot(body.acc)) < 1e-16) {
+          console.log("fuck you")
+          console.log(initvel, body.acc, dt, body.vel, displacement)
+        }
 
         body.mesh.position.copy(body.pos)
 
-        // body.trailPositions.push(body.pos.clone())
-        // if (body.trailPositions.length > maxTrailLength)
-        //   body.trailPositions.shift()
-        // body.trailGeometry.setFromPoints(body.trailPositions)
+        body.trailPositions.push(body.pos.clone())
+        if (body.trailPositions.length > maxTrailLength)
+          body.trailPositions.shift()
+        body.trailGeometry.setFromPoints(body.trailPositions)
       }
 
       for (let i = 0; i < bodies.length; ++i) {
@@ -203,21 +209,21 @@
           let dist = bodies[i].pos.distanceTo(bodies[j].pos)
           let collisionDistance = bodies[i].mesh.geometry.parameters.radius + bodies[j].mesh.geometry.parameters.radius
 
-          // if (dist < collisionDistance) alert(`💥Collision between ${bodies[i].name} and ${bodies[j].name}`)
+          if (dist < collisionDistance) alert(`💥Collision between ${bodies[i].name} and ${bodies[j].name}`)
         }
       }
     }
 
-    const timer = new Timer()
+    const clock = new Clock()
     
     function animate() {
       requestAnimationFrame(animate)
-      for (let i = 0; i < 400; ++i)
-        tick(timer.getDelta())
-      // controls.update()
+        tick(clock.getDelta())
       renderer.render(scene, camera)
+
     }
 
+    clock.start()
     animate()
 
     window.addEventListener("resize", () => {
