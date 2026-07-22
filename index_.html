@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Planetary Simulation</title>
+  <link rel="stylesheet" src="/src/styles/main.css" />
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #040713;
+      color: #f5f7ff;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    canvas { display: block; }
+
+    .speed-panel {
+      position: fixed;
+      z-index: 10;
+      left: 50%;
+      bottom: 24px;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 18px;
+      background: rgba(17, 24, 48, 0.52);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+      backdrop-filter: blur(18px) saturate(135%);
+      -webkit-backdrop-filter: blur(18px) saturate(135%);
+    }
+
+    .speed-label {
+      padding: 0 10px 0 7px;
+      color: rgba(225, 231, 255, 0.7);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .speed-button {
+      min-width: 54px;
+      height: 38px;
+      padding: 0 11px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 11px;
+      color: #f5f7ff;
+      background: rgba(255, 255, 255, 0.07);
+      font: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+    }
+
+    .speed-button:hover {
+      background: rgba(255, 255, 255, 0.13);
+      border-color: rgba(255, 255, 255, 0.27);
+    }
+
+    .speed-button:active { transform: translateY(1px); }
+
+    .speed-button.active {
+      border-color: rgba(172, 190, 255, 0.7);
+      background: linear-gradient(135deg, rgba(103, 133, 255, 0.55), rgba(126, 83, 218, 0.55));
+      box-shadow: 0 7px 20px rgba(85, 105, 205, 0.25);
+    }
+
+    .setup-panel {
+      position: fixed;
+      z-index: 10;
+      top: 22px;
+      left: 22px;
+      width: 300px;
+      padding: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 20px;
+      background: rgba(17, 24, 48, 0.52);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+      backdrop-filter: blur(18px) saturate(135%);
+      -webkit-backdrop-filter: blur(18px) saturate(135%);
+      max-height: calc(100vh - 44px);
+      overflow-y: auto;
+    }
+
+    .setup-panel h1 { margin: 0 0 6px; font-size: 18px; }
+    .setup-panel > p { margin: 0 0 15px; color: rgba(225, 231, 255, 0.68); font-size: 12px; line-height: 1.5; }
+
+    .planet-row {
+      display: grid;
+      grid-template-columns: 72px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+      padding: 9px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 13px;
+      background: rgba(255, 255, 255, 0.045);
+    }
+
+    .planet-row.selected {
+      border-color: rgba(153, 177, 255, 0.72);
+      background: rgba(105, 133, 231, 0.14);
+    }
+
+    .color-control {
+      height: 32px;
+      padding: 4px 7px 4px 5px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 9px;
+      background: rgba(255, 255, 255, 0.07);
+      color: rgba(242, 245, 255, 0.86);
+      font-size: 10px;
+      cursor: pointer;
+      transition: background 160ms ease, border-color 160ms ease;
+    }
+
+    .color-control:hover { background: rgba(255, 255, 255, 0.13); border-color: rgba(255, 255, 255, 0.28); }
+    .color-control input { width: 22px; height: 22px; padding: 0; border: 0; border-radius: 6px; background: transparent; cursor: pointer; }
+    .planet-name { font-size: 13px; font-weight: 650; }
+    .planet-position { margin-top: 3px; color: rgba(225, 231, 255, 0.6); font-size: 10px; font-variant-numeric: tabular-nums; }
+
+    .place-button, .start-button {
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 9px;
+      color: #f5f7ff;
+      background: rgba(255, 255, 255, 0.08);
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .place-button { padding: 7px 9px; font-size: 11px; }
+    .start-button { width: 100%; min-height: 42px; margin-top: 14px; background: linear-gradient(135deg, #6688ff, #7e55d9); font-size: 13px; }
+
+    .motion-editor {
+      margin-top: 12px;
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.045);
+    }
+
+    .motion-editor-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 11px;
+    }
+
+    .motion-editor h2 { margin: 0; font-size: 13px; }
+
+    .motion-editor select {
+      max-width: 130px;
+      height: 31px;
+      padding: 0 8px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 8px;
+      color: #f5f7ff;
+      background: rgba(17, 24, 48, 0.88);
+      font: inherit;
+      font-size: 11px;
+    }
+
+    .motion-field { margin-top: 11px; }
+    .motion-field label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; color: rgba(232, 237, 255, 0.78); font-size: 11px; }
+    .motion-value { color: #b9c8ff; font-variant-numeric: tabular-nums; }
+
+    .motion-field input[type="range"] {
+      width: 100%;
+      height: 5px;
+      margin: 0;
+      border-radius: 999px;
+      accent-color: #829dff;
+      cursor: pointer;
+    }
+
+    .direction-preview {
+      width: 42px;
+      height: 42px;
+      margin: 10px auto 0;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 50%;
+      background: rgba(3, 7, 20, 0.36);
+    }
+
+    .direction-arrow {
+      color: #9db2ff;
+      font-size: 22px;
+      line-height: 1;
+      transform: rotate(0deg);
+      transition: transform 100ms linear;
+    }
+
+    .placement-hint {
+      display: none;
+      position: fixed;
+      z-index: 10;
+      top: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 15px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 13px;
+      background: rgba(17, 24, 48, 0.58);
+      box-shadow: 0 12px 35px rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      color: rgba(239, 243, 255, 0.9);
+      font-size: 12px;
+      pointer-events: none;
+    }
+
+    .axis-legend {
+      position: fixed;
+      z-index: 10;
+      right: 22px;
+      bottom: 22px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 13px;
+      background: rgba(17, 24, 48, 0.52);
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+      backdrop-filter: blur(16px) saturate(135%);
+      -webkit-backdrop-filter: blur(16px) saturate(135%);
+      color: rgba(232, 237, 255, 0.72);
+      font-size: 10px;
+      pointer-events: none;
+    }
+
+    .axis-key { display: flex; align-items: center; gap: 4px; font-weight: 700; }
+    .axis-swatch { width: 14px; height: 3px; border-radius: 999px; box-shadow: 0 0 8px currentColor; }
+    .axis-x { color: #ff596b; background: #ff596b; }
+    .axis-y { color: #5ce49b; background: #5ce49b; }
+    .axis-z { color: #68a0ff; background: #68a0ff; }
+
+    .simulation-controls {
+      position: fixed;
+      z-index: 10;
+      top: 22px;
+      right: 22px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 9px 9px 9px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 16px;
+      background: rgba(17, 24, 48, 0.52);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+      backdrop-filter: blur(18px) saturate(135%);
+      -webkit-backdrop-filter: blur(18px) saturate(135%);
+    }
+
+    .simulation-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 78px;
+      color: rgba(235, 240, 255, 0.82);
+      font-size: 12px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #8ca5ff;
+      box-shadow: 0 0 11px currentColor;
+    }
+
+    .simulation-status.running .status-dot { background: #64e3ad; }
+    .simulation-status.paused .status-dot { background: #ffd071; }
+    .simulation-status.collision .status-dot { background: #ff748e; }
+
+    .pause-button {
+      min-width: 78px;
+      height: 38px;
+      padding: 0 13px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 11px;
+      color: #f5f7ff;
+      background: rgba(255, 255, 255, 0.08);
+      font: inherit;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .restart-control-button {
+      min-width: 78px;
+      height: 38px;
+      padding: 0 13px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 11px;
+      color: #f5f7ff;
+      background: rgba(255, 255, 255, 0.08);
+      font: inherit;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .pause-button:disabled, .restart-control-button:disabled { cursor: not-allowed; opacity: 0.45; }
+
+    .collision-overlay {
+      display: none;
+      position: fixed;
+      z-index: 30;
+      inset: 0;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(2, 5, 15, 0.64);
+      backdrop-filter: blur(9px);
+      -webkit-backdrop-filter: blur(9px);
+    }
+
+    .collision-overlay.visible { display: flex; }
+
+    .collision-card {
+      width: min(430px, 100%);
+      padding: 28px;
+      border: 1px solid rgba(255, 255, 255, 0.17);
+      border-radius: 24px;
+      background: rgba(17, 24, 48, 0.72);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(22px) saturate(135%);
+      -webkit-backdrop-filter: blur(22px) saturate(135%);
+      text-align: center;
+    }
+
+    .collision-symbol {
+      width: 62px;
+      height: 62px;
+      margin: 0 auto 15px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255, 116, 142, 0.42);
+      border-radius: 50%;
+      background: rgba(255, 80, 112, 0.13);
+      color: #ff8ba1;
+      font-size: 27px;
+    }
+
+    .collision-card h2 { margin: 0 0 8px; font-size: 23px; }
+    .collision-card p { margin: 0 0 20px; color: rgba(225, 231, 255, 0.7); font-size: 13px; line-height: 1.55; }
+
+    .restart-button {
+      min-height: 42px;
+      padding: 0 18px;
+      border: 1px solid rgba(180, 194, 255, 0.45);
+      border-radius: 11px;
+      color: #fff;
+      background: linear-gradient(135deg, #6688ff, #7e55d9);
+      font: inherit;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .hidden { display: none; }
+
+    @media (max-width: 560px) {
+      .speed-panel {
+        width: calc(100% - 20px);
+        bottom: 10px;
+        overflow-x: auto;
+      }
+      .speed-label { display: none; }
+      .speed-button { flex: 1 0 50px; }
+      .setup-panel { top: 10px; left: 10px; width: min(300px, calc(100% - 20px)); }
+      .placement-hint { top: auto; bottom: 72px; white-space: nowrap; }
+      .simulation-controls { top: auto; right: 10px; bottom: 72px; }
+      .axis-legend { right: 10px; bottom: 126px; }
+    }
+  </style>
+</head>
+<body>
+  <aside id="setupPanel" class="setup-panel">
+    <h1>Customize planets</h1>
+    <p>Choose colors, select “Place,” and click the orbital grid to set each starting position.</p>
+    <div class="planet-row" data-body="sun">
+      <label class="color-control" title="Change Sun color"><input id="sunColor" type="color" value="#ff0000" aria-label="Sun color" /><span>Color</span></label>
+      <div><div class="planet-name">Sun</div><div class="planet-position">Fixed at center</div></div>
+      <span></span>
+    </div>
+    <div class="planet-row" data-body="planet-one">
+      <label class="color-control" title="Change Planet One color"><input id="planetOneColor" type="color" value="#3399ff" aria-label="Planet One color" /><span>Color</span></label>
+      <div><div class="planet-name">Planet One</div><div id="planetOnePosition" class="planet-position">x 1.50 · z 0.00</div></div>
+      <button class="place-button" type="button" data-place="planet-one">Place</button>
+    </div>
+    <div class="planet-row" data-body="planet-two">
+      <label class="color-control" title="Change Planet Two color"><input id="planetTwoColor" type="color" value="#3399ff" aria-label="Planet Two color" /><span>Color</span></label>
+      <div><div class="planet-name">Planet Two</div><div id="planetTwoPosition" class="planet-position">x -1.50 · z 0.00</div></div>
+      <button class="place-button" type="button" data-place="planet-two">Place</button>
+    </div>
+    <section class="motion-editor" aria-labelledby="motionEditorTitle">
+      <div class="motion-editor-header">
+        <h2 id="motionEditorTitle">Velocity &amp; direction</h2>
+        <select id="motionPlanet" aria-label="Planet to adjust">
+          <option value="planet-one">Planet One</option>
+          <option value="planet-two">Planet Two</option>
+        </select>
+      </div>
+      <div class="motion-field">
+        <label for="velocityControl"><span>Velocity</span><output id="velocityValue" class="motion-value">0.0100</output></label>
+        <input id="velocityControl" type="range" min="0.001" max="0.04" step="0.0005" value="0.01" />
+      </div>
+      <div class="motion-field">
+        <label for="directionControl"><span>Direction</span><output id="directionValue" class="motion-value">90°</output></label>
+        <input id="directionControl" type="range" min="0" max="359" step="1" value="90" />
+      </div>
+      <div class="direction-preview" aria-hidden="true"><span id="directionArrow" class="direction-arrow">→</span></div>
+    </section>
+    <button id="startSimulation" class="start-button" type="button">Start simulation</button>
+  </aside>
+  <div id="placementHint" class="placement-hint">Move the pointer, then click to place the selected planet</div>
+  <div class="axis-legend" aria-label="Coordinate axes">
+    <span class="axis-key"><span class="axis-swatch axis-x"></span>X</span>
+    <span class="axis-key"><span class="axis-swatch axis-y"></span>Y</span>
+    <span class="axis-key"><span class="axis-swatch axis-z"></span>Z</span>
+  </div>
+  <div class="simulation-controls" aria-label="Simulation controls">
+    <div id="simulationStatus" class="simulation-status setup" aria-live="polite">
+      <span class="status-dot" aria-hidden="true"></span>
+      <span id="statusText">Setup</span>
+    </div>
+    <button id="pauseSimulation" class="pause-button" type="button" disabled>Pause</button>
+    <button id="resetSimulation" class="restart-control-button" type="button" disabled>Restart</button>
+  </div>
+  <div id="collisionOverlay" class="collision-overlay" role="dialog" aria-modal="true" aria-labelledby="collisionTitle">
+    <div class="collision-card">
+      <div class="collision-symbol" aria-hidden="true">✦</div>
+      <h2 id="collisionTitle">Planetary collision</h2>
+      <p id="collisionMessage">Two bodies collided. The simulation has stopped safely.</p>
+      <button id="restartSimulation" class="restart-button" type="button">Restart simulation</button>
+    </div>
+  </div>
+  <nav class="speed-panel" aria-label="Orbital speed control">
+    <span class="speed-label">Orbital speed</span>
+    <button class="speed-button active" type="button" data-speed="1">1×</button>
+    <button class="speed-button" type="button" data-speed="1.25">1.25×</button>
+    <button class="speed-button" type="button" data-speed="1.5">1.5×</button>
+    <button class="speed-button" type="button" data-speed="1.75">1.75×</button>
+    <button class="speed-button" type="button" data-speed="2">2×</button>
+    <button class="speed-button" type="button" data-speed="3">3×</button>
+  </nav>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/dat.gui"></script>
+  <script type="module">
+    import * as THREE from "three"
+    import { OrbitControls } from "three/addons/controls/OrbitControls.js"
+    // 1 second in simulation will represent approximately 12 days in real life.
+    const G = 0.00029591220828559104 // gravitational constant in astronomical units
+    const AU = 1 // astronomical unit in simulation unit, 1 unit = distance between earth and sun in km
+    const DAY = 1 // 1unit = 1day bascially 1 simulation unit represents 1 day
+    const dt = 0.05 // Time step in days  assumed constant accelration for 1.2 hours.
+  
+
+    const scene = new THREE.Scene()
+    const loader = new THREE.TextureLoader()
+    // TODO: Background texture
+    loader.load("background_img.png", function(texture) {
+      scene.background = texture
+    })
+
+    const camera = new THREE.PerspectiveCamera(
+      60, // fov 
+      window.innerWidth / window.innerHeight, // aspect 
+      0.01, // near plane 
+      1000, // far plane
+    )
+    camera.position.set(0, 2.7, 5.2)
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true })
+    renderer.setSize(window.innerWidth, window.innerHeight)
+    document.body.appendChild(renderer.domElement)
+
+    const controls = new OrbitControls(camera, renderer.domElement)
+    controls.enableDamping = true
+    controls.dampingFactor = 0.05
+    controls.enablePan = false
+    controls.minDistance = 1 
+    controls.maxDistance = 50
+
+    const placementGrid = new THREE.GridHelper(8, 32, 0x7898ff, 0x26375f)
+    placementGrid.material.transparent = true
+    placementGrid.material.opacity = 0.2
+    scene.add(placementGrid)
+
+    // persistent 3D coordinate axes: X = red, Y = green, Z = blue.
+    const coordinateAxes = new THREE.AxesHelper(3.5)
+    coordinateAxes.position.y = 0.004
+    coordinateAxes.renderOrder = 1
+    if (Array.isArray(coordinateAxes.material)) {
+      coordinateAxes.material.forEach(material => {
+        material.depthTest = true
+        material.depthWrite = false
+        material.transparent = true
+        material.opacity = 0.58
+        material.linewidth = 1
+      })
+    } else {
+      coordinateAxes.material.depthTest = true
+      coordinateAxes.material.depthWrite = false
+      coordinateAxes.material.transparent = true
+      coordinateAxes.material.opacity = 0.58
+      coordinateAxes.material.linewidth = 1
+    }
+    scene.add(coordinateAxes)
+
+    function createAxisLabel(text, color, position) {
+      const canvas = document.createElement("canvas")
+      canvas.width = 128
+      canvas.height = 64
+      const context = canvas.getContext("2d")
+      context.clearRect(0, 0, canvas.width, canvas.height)
+      context.font = "700 38px system-ui"
+      context.textAlign = "center"
+      context.textBaseline = "middle"
+      context.fillStyle = color
+      context.shadowColor = "rgba(0, 0, 0, 0.9)"
+      context.shadowBlur = 8
+      context.fillText(text, canvas.width / 2, canvas.height / 2)
+      const texture = new THREE.CanvasTexture(canvas)
+      texture.colorSpace = THREE.SRGBColorSpace
+      const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false })
+      const label = new THREE.Sprite(material)
+      label.position.copy(position)
+      label.scale.set(0.42, 0.21, 1)
+      label.renderOrder = 999
+      scene.add(label)
+    }
+
+    createAxisLabel("X", "#ff596b", new THREE.Vector3(3.72, 0, 0))
+    createAxisLabel("Y", "#5ce49b", new THREE.Vector3(0, 3.72, 0))
+    createAxisLabel("Z", "#68a0ff", new THREE.Vector3(0, 0, 3.72))
+
+    const placementMarker = new THREE.Mesh(
+      new THREE.RingGeometry(0.065, 0.095, 48),
+      new THREE.MeshBasicMaterial({ color: 0xb0c2ff, transparent: true, opacity: 0.9, side: THREE.DoubleSide })
+    )
+    placementMarker.rotation.x = -Math.PI / 2
+    placementMarker.visible = false
+    scene.add(placementMarker)
+
+    const light = new THREE.PointLight(0xffffff, 2)
+    light.position.set(0, 0, 5)
+    light.intensity = 20
+    scene.add(light)
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.05); // soft white light with low intensity
+    scene.add(ambientLight);
+
+
+    const bodies = []
+
+
+    let createBody = (id, name, mass, position, velocity, size, color) => {
+      const geometry = new THREE.SphereGeometry(size, 32, 32)
+      const material = new THREE.MeshStandardMaterial({ color })
+      const mesh = new THREE.Mesh(geometry, material)
+      mesh.position.x = position.x
+      mesh.position.y = position.y
+      mesh.position.z = position.z
+      scene.add(mesh)
+
+
+  
+      bodies.push({
+        id, name, mass, size,
+        pos: position.clone(),
+        vel: velocity.clone(),
+        acc: new THREE.Vector3(),
+        mesh,
+      })
+    }
+    createBody("sun", "Sun", 1.5, new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 0), 0.1, 0xff0000)
+    createBody("planet-one", "Planet One", 0.000003, new THREE.Vector3(1.5, 0, 0), new THREE.Vector3(0, 0, 0.01), 0.03, 0x3399ff)
+    createBody("planet-two", "Planet Two", 0.000003, new THREE.Vector3(-1.5, 0, 0), new THREE.Vector3(0, 0, -0.01), 0.03, 0x3399ff)
+    //createBody("Earth2", 0.000003, new THREE.Vector3(3.4, 0.1, 0), new THREE.Vector3(0, 0.01, 0), 0.03, 0x3399ff)
+    // gui
+
+    const settings = {
+      timeScale: 1,
+    }
+
+    let simulationStarted = false
+    let simulationPaused = false
+    let collisionDetected = false
+    let initialSimulationState = []
+    let selectedBodyId = null
+
+    const setupPanel = document.querySelector("#setupPanel")
+    const placementHint = document.querySelector("#placementHint")
+    const simulationStatus = document.querySelector("#simulationStatus")
+    const statusText = document.querySelector("#statusText")
+    const pauseSimulation = document.querySelector("#pauseSimulation")
+    const resetSimulation = document.querySelector("#resetSimulation")
+    const collisionOverlay = document.querySelector("#collisionOverlay")
+    const collisionMessage = document.querySelector("#collisionMessage")
+    const motionPlanet = document.querySelector("#motionPlanet")
+    const velocityControl = document.querySelector("#velocityControl")
+    const velocityValue = document.querySelector("#velocityValue")
+    const directionControl = document.querySelector("#directionControl")
+    const directionValue = document.querySelector("#directionValue")
+    const directionArrow = document.querySelector("#directionArrow")
+
+    function setSimulationStatus(state, label) {
+      simulationStatus.className = `simulation-status ${state}`
+      statusText.textContent = label
+    }
+
+    function bodyById(id) {
+      return bodies.find(body => body.id === id)
+    }
+
+    function updatePositionLabel(body) {
+      const label = document.querySelector(body.id === "planet-one" ? "#planetOnePosition" : "#planetTwoPosition")
+      label.textContent = `x ${body.pos.x.toFixed(2)} · z ${body.pos.z.toFixed(2)}`
+    }
+
+    function setCircularOrbitVelocity(body) {
+      const sun = bodyById("sun")
+      const offsetFromSun = new THREE.Vector3().subVectors(body.pos, sun.pos)
+      const orbitalRadius = offsetFromSun.length()
+      const orbitalSpeed = Math.sqrt(G * sun.mass / orbitalRadius)
+      const tangent = new THREE.Vector3(-offsetFromSun.z, 0, offsetFromSun.x).normalize()
+      body.vel.copy(tangent.multiplyScalar(orbitalSpeed)).add(sun.vel)
+    }
+
+    function getRelativeMotion(body) {
+      const relativeVelocity = body.vel.clone().sub(bodyById("sun").vel)
+      const speed = relativeVelocity.length()
+      const direction = (THREE.MathUtils.radToDeg(Math.atan2(relativeVelocity.z, relativeVelocity.x)) + 360) % 360
+      return { speed, direction }
+    }
+
+    function updateMotionEditor() {
+      const body = bodyById(motionPlanet.value)
+      const motion = getRelativeMotion(body)
+      const limitedSpeed = THREE.MathUtils.clamp(motion.speed, Number(velocityControl.min), Number(velocityControl.max))
+      velocityControl.value = limitedSpeed
+      directionControl.value = Math.round(motion.direction)
+      velocityValue.textContent = Number(velocityControl.value).toFixed(4)
+      directionValue.textContent = `${Math.round(motion.direction)}°`
+      directionArrow.style.transform = `rotate(${motion.direction}deg)`
+    }
+
+    function applyMotionEditor() {
+      const body = bodyById(motionPlanet.value)
+      const sun = bodyById("sun")
+      const speed = Number(velocityControl.value)
+      const direction = Number(directionControl.value)
+      const radians = THREE.MathUtils.degToRad(direction)
+      body.vel.set(Math.cos(radians) * speed, 0, Math.sin(radians) * speed).add(sun.vel)
+      velocityValue.textContent = speed.toFixed(4)
+      directionValue.textContent = `${direction}°`
+      directionArrow.style.transform = `rotate(${direction}deg)`
+    }
+
+    motionPlanet.addEventListener("change", updateMotionEditor)
+    velocityControl.addEventListener("input", applyMotionEditor)
+    directionControl.addEventListener("input", applyMotionEditor)
+
+    function saveInitialSimulationState() {
+      initialSimulationState = bodies.map(body => ({
+        id: body.id,
+        pos: body.pos.clone(),
+        vel: body.vel.clone()
+      }))
+    }
+
+    function detectCollision() {
+      for (let i = 0; i < bodies.length; ++i) {
+        for (let j = i + 1; j < bodies.length; ++j) {
+          const first = bodies[i]
+          const second = bodies[j]
+          if (first.pos.distanceTo(second.pos) <= first.size + second.size) {
+            endSimulationWithCollision(first, second)
+            return true
+          }
+        }
+      }
+      return false
+    }
+
+    function endSimulationWithCollision(first, second) {
+      if (collisionDetected) return
+      collisionDetected = true
+      simulationPaused = true
+      pauseSimulation.disabled = true
+      pauseSimulation.textContent = "Pause"
+      setSimulationStatus("collision", "Collision")
+      collisionMessage.textContent = `${first.name} and ${second.name} collided. The simulation has stopped safely.`
+      collisionOverlay.classList.add("visible")
+    }
+
+    function restoreInitialState() {
+      initialSimulationState.forEach(savedBody => {
+        const body = bodyById(savedBody.id)
+        body.pos.copy(savedBody.pos)
+        body.vel.copy(savedBody.vel)
+        body.acc.set(0, 0, 0)
+        body.mesh.position.copy(savedBody.pos)
+        if (body.id !== "sun") updatePositionLabel(body)
+      })
+    }
+
+    function restartFromInitialState() {
+      restoreInitialState()
+      collisionDetected = false
+      simulationPaused = false
+      simulationStarted = false
+      pauseSimulation.disabled = true
+      resetSimulation.disabled = true
+      pauseSimulation.textContent = "Pause"
+      collisionOverlay.classList.remove("visible")
+      setupPanel.classList.remove("hidden")
+      placementGrid.visible = true
+      setSimulationStatus("setup", "Setup")
+    }
+
+    function restartMidOrbit() {
+      if (!initialSimulationState.length) return
+      restoreInitialState()
+      collisionDetected = false
+      simulationPaused = false
+      simulationStarted = true
+      collisionOverlay.classList.remove("visible")
+      setupPanel.classList.add("hidden")
+      placementGrid.visible = false
+      pauseSimulation.disabled = false
+      resetSimulation.disabled = false
+      pauseSimulation.textContent = "Pause"
+      setSimulationStatus("running", "Running")
+    }
+
+    document.querySelector("#sunColor").addEventListener("input", event => bodyById("sun").mesh.material.color.set(event.target.value))
+    document.querySelector("#planetOneColor").addEventListener("input", event => bodyById("planet-one").mesh.material.color.set(event.target.value))
+    document.querySelector("#planetTwoColor").addEventListener("input", event => bodyById("planet-two").mesh.material.color.set(event.target.value))
+
+    function finishPlacement() {
+      selectedBodyId = null
+      placementMarker.visible = false
+      placementHint.style.display = "none"
+      controls.enabled = true
+      document.querySelectorAll(".planet-row").forEach(row => row.classList.remove("selected"))
+    }
+
+    document.querySelectorAll(".place-button").forEach(button => {
+      button.addEventListener("click", () => {
+        selectedBodyId = button.dataset.place
+        const body = bodyById(selectedBodyId)
+        placementMarker.position.copy(body.pos)
+        placementMarker.visible = true
+        placementHint.style.display = "block"
+        controls.enabled = false
+        document.querySelectorAll(".planet-row").forEach(row => row.classList.toggle("selected", row.dataset.body === selectedBodyId))
+      })
+    })
+
+    const raycaster = new THREE.Raycaster()
+    const pointer = new THREE.Vector2()
+    const orbitalPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
+    const placementPoint = new THREE.Vector3()
+
+    function projectPointer(event) {
+      pointer.x = (event.clientX / window.innerWidth) * 2 - 1
+      pointer.y = -(event.clientY / window.innerHeight) * 2 + 1
+      raycaster.setFromCamera(pointer, camera)
+      return raycaster.ray.intersectPlane(orbitalPlane, placementPoint)
+    }
+
+    renderer.domElement.addEventListener("pointermove", event => {
+      if (!selectedBodyId || !projectPointer(event)) return
+      placementPoint.y = 0
+      placementMarker.position.copy(placementPoint)
+    })
+
+    renderer.domElement.addEventListener("pointerdown", event => {
+      if (!selectedBodyId || !projectPointer(event)) return
+      const body = bodyById(selectedBodyId)
+      const minimumRadius = bodyById("sun").size + body.size + 0.08
+      if (Math.hypot(placementPoint.x, placementPoint.z) < minimumRadius) {
+        placementPoint.setLength(minimumRadius)
+        placementPoint.y = 0
+      }
+      body.pos.copy(placementPoint)
+      body.mesh.position.copy(placementPoint)
+      setCircularOrbitVelocity(body)
+      motionPlanet.value = body.id
+      updateMotionEditor()
+      updatePositionLabel(body)
+      finishPlacement()
+    })
+
+    document.querySelector("#startSimulation").addEventListener("click", () => {
+      finishPlacement()
+      simulationStarted = true
+      simulationPaused = false
+      collisionDetected = false
+      saveInitialSimulationState()
+      setupPanel.classList.add("hidden")
+      placementGrid.visible = false
+      pauseSimulation.disabled = false
+      resetSimulation.disabled = false
+      pauseSimulation.textContent = "Pause"
+      setSimulationStatus("running", "Running")
+    })
+
+    pauseSimulation.addEventListener("click", () => {
+      if (!simulationStarted) return
+      simulationPaused = !simulationPaused
+      pauseSimulation.textContent = simulationPaused ? "Resume" : "Pause"
+      setSimulationStatus(simulationPaused ? "paused" : "running", simulationPaused ? "Paused" : "Running")
+    })
+
+    document.querySelector("#restartSimulation").addEventListener("click", restartFromInitialState)
+    resetSimulation.addEventListener("click", restartMidOrbit)
+
+    updateMotionEditor()
+
+    // Speed changes are applied immediately by the existing physics tick.
+    document.querySelectorAll(".speed-button").forEach(button => {
+      button.addEventListener("click", () => {
+        settings.timeScale = Number(button.dataset.speed)
+        document.querySelectorAll(".speed-button").forEach(item => {
+          item.classList.toggle("active", item === button)
+        })
+      })
+    })
+
+
+    THREE.Vector3.prototype.square = function() {
+      return new THREE.Vector3(this.x ** 2, this.y ** 2, this.z ** 2)
+    }
+
+    // physics logic
+    function tick() {
+      for (let i = 0; i < bodies.length; ++i) {
+        let now = bodies[i]
+        now.acc.set(0, 0, 0)
+
+        for (let j = 0; j < bodies.length; ++j) {
+          if (i == j)
+            continue
+          let other = bodies[j]
+          let rVec = new THREE.Vector3().subVectors(other.pos, now.pos)
+          let dist = rVec.length()
+          let accMag = G * other.mass / dist ** 2
+          let accVec = rVec.clone().normalize().multiplyScalar(accMag)
+
+          now.acc.add(accVec)
+
+        }
+      }
+    
+      for (let body of bodies) {
+        let vel = body.vel.clone()
+        body.vel.add(body.acc.clone().multiplyScalar(dt * settings.timeScale))
+        body.pos.add((vel.multiplyScalar(dt * settings.timeScale)).add(body.acc.clone().multiplyScalar(0.5 * (dt * settings.timeScale)**2 ) ) )
+
+        body.mesh.position.copy(body.pos)
+      }
+    }
+    
+    let n = 4//adjust n to change speed of orbit
+    function animate() {
+      requestAnimationFrame(animate)
+      if (simulationStarted && !simulationPaused && !collisionDetected) {
+        for (let i = 0; i < n; ++i) {
+          if (detectCollision()) break
+          tick()
+          if (detectCollision()) break
+        }
+      }
+      controls.update()
+      placementMarker.rotation.z += 0.012
+      renderer.render(scene, camera)
+    }
+
+    animate()
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    })
+
+    </script>
+</body>
