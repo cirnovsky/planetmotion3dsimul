@@ -6,8 +6,8 @@ An interactive 3D gravity simulator built with Three.js. User can experiment wit
 ## Features
 
 - **Customise planetary systems** :Adjust initial speed, position, and direction of planets before simulation begins.
-- **Real-time controls** – Modify orbital speed on the fly during simulation.
-- **Collision detection** – Planet impacts are detected and simulation stops.
+- **Real-time controls** :Modify orbital speed on the fly during simulation.
+- **Collision detection** :Planet impacts are detected and simulation stops.
 
 ---
 ![Simulation Preview](assets/IMG1.png)
